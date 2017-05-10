@@ -110,11 +110,12 @@ class Board {
 
 	/**
 	 * Returns an ANSI rendering of the board.
+	 * @param {number} dim - The dimming factor for the square colors (0–23).
 	 * @return {string} A graphical representation of the board containing ANSI escapes and non-ASCII characters.
 	 */
-	toString() {
+	toString(dim=4) {
 		return _.range(8, 0, -1).reduce((lines, r) => {
-			const bg = (c) => `\u001b[48;5;${(r + c) % 2? 238 : 249 }m`;
+			const bg = (c) => `\u001b[48;5;${(r + c) % 2? 232 + dim : 255 - dim}m`;
 			lines.push(`    ${_.range(1, 9).map((c) => `${bg(c)}      \u001b[0m`).join("")}`);
 			lines.push(` ${r}  ${_.range(1, 9).map((c) => `${bg(c)}\u001b[38;2;${(this.pieceAt(c, r) || { }).color == Board.Black? "0;0;0" : "255;255;255"}m  ${(this.pieceAt(c, r) || " ").toString()}   \u001b[0m`).join("")}`);
 			lines.push(`    ${_.range(1, 9).map((c) => `${bg(c)}      \u001b[0m`).join("")}`);
@@ -188,4 +189,4 @@ class Board {
 	};
 };
 
-module.exports = Board;
+Piece.init(module.exports = Board);
