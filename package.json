@@ -1,0 +1,12 @@
+{
+  "name": "random-chess",
+  "version": "0.0.0",
+  "description": "Randomized chess.",
+  "main": "index.js",
+  "repository": "https://github.com/kaitamkun/random-chess.git",
+  "author": "Kai Tamkun <ktamkun@ucsc.edu>",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^1.1.3"
+  }
+}
