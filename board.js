@@ -47,7 +47,7 @@ class Board {
 	 */
 	addPiece(pieceType, color, pos) {
 		if (pieceType instanceof Piece) {
-			if (this.pieceAt(...pieceType.position)) {
+			if (this.pieceAt(pieceType.position)) {
 				throw new Error(`A piece already exists at ${Board.formatPosition(pos)}.`);
 			};
 
@@ -60,7 +60,7 @@ class Board {
 			throw new Error(`Invalid position: ${JSON.stringify(pos)}`);
 		};
 
-		if (this.pieceAt(...pos)) {
+		if (this.pieceAt(pos)) {
 			throw new Error(`A piece already exists at ${Board.formatPosition(pos)}.`);
 		};
 
@@ -72,6 +72,7 @@ class Board {
 	 * @param {...string} filters - An array of filters like [type, filter], where type is either "color" or "piece",
 	 *                              and filter is a color or a piece type.
 	 * @return {Piece[]} An array of pieces matching the given filters.
+	 * @throws Will throw an exception if given an unrecognized filter.
 	 */
 	pickPieces(...filters) {
 		let found = _.clone(this.pieces);
@@ -81,7 +82,7 @@ class Board {
 			} else if (type == "piece") {
 				found = _.filter(found, (piece) => piece instanceof filter);
 			} else {
-				throw `Unknown piece filter type: "${type}"`;
+				throw new Error(`Unknown piece filter type: "${type}"`);
 			};
 		});
 
@@ -98,14 +99,21 @@ class Board {
 
 	/**
 	 * Checks whether there is a piece at the given location.
-	 * @param {number} column - The column of the position to check.
-	 * @param {number} row - The row of the position to check.
+	 * @param {(string|number[])} pos - A position parseable by Board.parsePosition.
 	 * @return {?Piece} The piece at the given location if one exists; null otherwise.
 	 */
-	pieceAt(column, row) {
-		return this.pieces.filter(({ position }) => {
-			return _.isEqual([column, row], position)
-		})[0] || null;
+	pieceAt(position) {
+		position = Board.parsePosition(position);
+		return this.pieces.filter((piece) => _.isEqual(piece.position, position))[0] || null;
+	};
+
+	/**
+	 * Removes a given piece.
+	 * @param {Piece} piece - The piece to remove.
+	 */
+	removePiece(piece) {
+		piece.board = piece.position = piece.color = null;
+		this.pieces = this.pieces.filter((p) => p != piece);
 	};
 
 	/**
@@ -117,7 +125,7 @@ class Board {
 		return _.range(8, 0, -1).reduce((lines, r) => {
 			const bg = (c) => `\u001b[48;5;${(r + c) % 2? 232 + dim : 255 - dim}m`;
 			lines.push(`    ${_.range(1, 9).map((c) => `${bg(c)}      \u001b[0m`).join("")}`);
-			lines.push(` ${r}  ${_.range(1, 9).map((c) => `${bg(c)}\u001b[38;2;${(this.pieceAt(c, r) || { }).color == Board.Black? "0;0;0" : "255;255;255"}m  ${(this.pieceAt(c, r) || " ").toString()}   \u001b[0m`).join("")}`);
+			lines.push(` ${r}  ${_.range(1, 9).map((c) => `${bg(c)}\u001b[38;2;${(this.pieceAt([c, r]) || { }).color == Board.Black? "0;0;0" : "255;255;255"}m  ${(this.pieceAt([c, r]) || " ").toString()}   \u001b[0m`).join("")}`);
 			lines.push(`    ${_.range(1, 9).map((c) => `${bg(c)}      \u001b[0m`).join("")}`);
 			return lines;
 		}, ["", "      " + _.range(1, 9).map((c) => Board.formatPosition([c, 1])[0]).join("     "), ""]).join("\n");
@@ -127,6 +135,7 @@ class Board {
 	 * Converts a variety of representations into a Symbol representing a color.
 	 * @param {(Symbol|number|string)} color - The color to convert to a symbol.
 	 * @return {Symbol} The symbol representing the color.
+	 * @throws Will throw an exception if the given color is invalid.
 	 */
 	static getColor(color) {
 		if (_.includes(Board.Colors, color)) {
@@ -147,46 +156,52 @@ class Board {
 			};
 		};
 
-		throw `Unable to parse "${color}" as a color.`;
+		throw new Error(`Unable to parse "${color}" as a color.`);
 	};
 
 	/**
 	 * Parses a position.
-	 * @param {(string[]|string)} pos - A value like "A4", "14", ["A", "4"] or ["1", "4"].
+	 * @param {(string[]|string|Piece)} position - A value like "A4", "14", ["A", "4"] or ["1", "4"], or a piece.
 	 * @return {number[]} An array containing the column and row of the position as numbers from 1 to 8.
+	 * @throws Will throw an exception if the given position is invalid.
 	 */
-	static parsePosition(pos) {
-		if (typeof pos == "string") {
-			if (pos.match(/^[a-h][1-8]$/i)) {
-				return ["abcdefgh".split("").indexOf(pos[0].toLowerCase()) + 1, parseInt(pos[1])];
-			};
-
-			if (pos.match(/^[1-8]{2}$/)) {
-				return pos.split("").map(n => parseInt(n));
-			};
-		} else if (pos instanceof Array) {
-			return Board.parsePosition(pos.join(""));
+	static parsePosition(position) {
+		if (position instanceof Piece) {
+			return position.position;
 		};
 
-		throw "Unable to parse the given position.";
+		if (typeof position == "string") {
+			if (position.match(/^[a-h][1-8]$/i)) {
+				return ["abcdefgh".split("").indexOf(position[0].toLowerCase()) + 1, parseInt(position[1])];
+			};
+
+			if (position.match(/^[1-8]{2}$/)) {
+				return position.split("").map(n => parseInt(n));
+			};
+		} else if (position instanceof Array) {
+			return Board.parsePosition(position.join(""));
+		};
+
+		throw new Error(`Unable to parse the given position (${JSON.stringify(position)}).`);
 	};
 
 	/**
 	 * Checks whether a given position is inside the board and not in the extratabular void.
-	 * @param ({string[]|string}) pos - A position parseable by parsePosition().
+	 * @param ({string[]|string}) position - A position parseable by parsePosition().
 	 */
-	static validPosition(pos) {
-		return _.every(Board.parsePosition(pos), (n) => _.inRange(n, 1, 9));
+	static validPosition(position) {
+		return _.every(Board.parsePosition(position), (n) => _.inRange(n, 1, 9));
 	};
 
 	/**
 	 * Turns a position into a string in the standard letter-number form.
-	 * @param {number[]} pos - The position to format.
+	 * @param {(string|number[]|Piece)} pos - A position parseable by Board.parsePosition.
 	 * @return {string} A nicely formatted string.
 	 */
-	static formatPosition(pos) {
-		return String.fromCharCode("A".charCodeAt(0) + pos[0] - 1) + pos[1];
+	static formatPosition(position) {
+		position = Board.parsePosition(position);
+		return String.fromCharCode("A".charCodeAt(0) + position[0] - 1) + position[1];
 	};
 };
 
-Piece.init(module.exports = Board);
+Piece.initAll(module.exports = Board);

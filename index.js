@@ -16,4 +16,9 @@ exports.Chess = class Chess {
 
 let b = new Board();
 b.setBoard();
-console.log(b.toString());
+b.pieces.filter((p) => p instanceof Rook && p.color == Board.Black)[0].moveTo("B3");
+let pawn = b.pieceAt("C2");
+
+console.log(b.toString(8));
+pawn.moves();
+
