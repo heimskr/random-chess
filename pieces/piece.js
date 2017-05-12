@@ -77,11 +77,11 @@ class Piece {
 
 		const line = (index, condition, direction) => {
 			let position;
-			for (let c = this.position[index]; condition(c); c += direction) {
+			for (let c = this.position[index] + direction; condition(c); c += direction) {
 				position = index? [this.x, c] : [c, this.y];
-				if ((other = this.offset(...position)) && other.color != this.color) {
+				if ((other = this.board.pieceAt(position)) && other.color != this.color) {
 					add(other.position, other);
-				} else {
+				} else if (!other) {
 					add(position);
 					continue;
 				};
@@ -120,28 +120,28 @@ class Piece {
 
 
 		// Up and to the left.
-		for ([x, y] = this.position; 1 <= x && y <= 8; x--, y++) {
+		for ([x, y] = [this.x - 1, this.y + 1]; 1 <= x && y <= 8; x--, y++) {
 			if (check(x, y)) {
 				break;
 			};
 		};
 
 		// Up and to the right.
-		for ([x, y] = this.position; x <= 8 && y <= 8; x++, y++) {
+		for ([x, y] = [this.x + 1, this.y + 1]; x <= 8 && y <= 8; x++, y++) {
 			if (check(x, y)) {
 				break;
 			};
 		};
 
 		// Down and to the left.
-		for ([x, y] = this.position; 1 <= x && 1 <= y; x--, y--) {
+		for ([x, y] = [this.x - 1, this.y - 1]; 1 <= x && 1 <= y; x--, y--) {
 			if (check(x, y)) {
 				break;
 			};
 		};
 
 		// Down and to the right.
-		for ([x, y] = this.position; x <= 8 && 1 <= y; x++, y--) {
+		for ([x, y] = [this.x + 1, this.y - 1]; x <= 8 && 1 <= y; x++, y--) {
 			if (check(x, y)) {
 				break;
 			};

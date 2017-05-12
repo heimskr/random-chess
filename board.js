@@ -106,6 +106,10 @@ class Board {
 	 * @return {?Piece} The piece at the given location if one exists; null otherwise.
 	 */
 	pieceAt(position) {
+		if (position == null) {
+			return null;
+		};
+		
 		position = Board.parsePosition(position);
 		return this.pieces.filter((piece) => _.isEqual(piece.position, position))[0] || null;
 	};
@@ -197,10 +201,13 @@ class Board {
 	/**
 	 * Checks whether a given position is inside the board and not in the extratabular void.
 	 * @param ({string[]|string}) position - A position parseable by parsePosition().
-	 * @throws Will throw an exception if the given position is unparseable.
 	 */
 	static validPosition(position) {
-		return _.every(Board.parsePosition(position), (n) => _.inRange(n, 1, 9));
+		try {
+			return _.every(Board.parsePosition(position), (n) => _.inRange(n, 1, 9));
+		} catch(e) {
+			return false;
+		};
 	};
 
 	/**

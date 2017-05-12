@@ -16,7 +16,9 @@ exports.Chess = class Chess {
 };
 
 let b = new Board();
-b.setBoard();
-let piece = b.addPiece(King, "black", "D4");
+// b.setBoard();
+let piece = b.addPiece(Knight, "black", "D4");
+b.addPiece(King, "black", "E6");
+
 console.log(b.toString(8, true));
-console.log(`Moves for ${Board.formatColor(piece)} ${piece.constructor.name} at ${piece.formatPosition()}: ${piece.moves().map((p) => chalk.bold(Board.formatPosition(p))).join(", ")}`);
+console.log(`Moves for ${Board.formatColor(piece)} ${piece.constructor.name} at ${piece.formatPosition()}: ${piece.moves().map((p) => chalk.bold(Board.formatPosition([p[0], p[1]]))).join(", ")}`);
