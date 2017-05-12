@@ -42,29 +42,32 @@ class Board {
 	 * Adds a piece to the board.
 	 * @param {(Piece|class)} pieceType - A type of piece (a reference to a class extending Piece)
 	 * @param {Color} color - The color of the piece.
-	 * @param {number[]} pos - An array of two integers (see parsePosition) representing a position on the board.
+	 * @param {number[]} position - An array of two integers (see parsePosition) representing a position on the board.
+	 * @return {Piece} The piece added to the board.
 	 * @throws Will throw an exception if the given position is invalid or already contains a piece, or if the color is invalid.
 	 */
-	addPiece(pieceType, color, pos) {
+	addPiece(pieceType, color, position) {
 		if (pieceType instanceof Piece) {
 			if (this.pieceAt(pieceType.position)) {
-				throw new Error(`A piece already exists at ${Board.formatPosition(pos)}.`);
+				throw new Error(`A piece already exists at ${Board.formatPosition(position)}.`);
 			};
 
 			this.pieces.push(pieceType);	
-			return;
+			return pieceType;
 		};
 
-		pos = Board.parsePosition(pos);
-		if (!Board.validPosition(pos)) {
-			throw new Error(`Invalid position: ${JSON.stringify(pos)}`);
+		position = Board.parsePosition(position);
+		if (!Board.validPosition(position)) {
+			throw new Error(`Invalid position: ${JSON.stringify(position)}`);
 		};
 
-		if (this.pieceAt(pos)) {
-			throw new Error(`A piece already exists at ${Board.formatPosition(pos)}.`);
+		if (this.pieceAt(position)) {
+			throw new Error(`A piece already exists at ${Board.formatPosition(position)}.`);
 		};
 
-		this.pieces.push(new pieceType(this, Board.getColor(color), pos));
+		const piece = new pieceType(this, Board.getColor(color), position);
+		this.pieces.push(piece);
+		return piece;
 	};
 
 	/**
@@ -119,12 +122,14 @@ class Board {
 	/**
 	 * Returns an ANSI rendering of the board.
 	 * @param {number} dim - The dimming factor for the square colors (0–23).
+	 * @param {boolean} showPositions - Whether to positions on each square.
 	 * @return {string} A graphical representation of the board containing ANSI escapes and non-ASCII characters.
 	 */
-	toString(dim=4) {
+	toString(dim=4, showPositions=false) {
 		return _.range(8, 0, -1).reduce((lines, r) => {
 			const bg = (c) => `\u001b[48;5;${(r + c) % 2? 232 + dim : 255 - dim}m`;
-			lines.push(`    ${_.range(1, 9).map((c) => `${bg(c)}      \u001b[0m`).join("")}`);
+			const fg = (c, o=4) => `\u001b[38;5;${(r + c) % 2? 232 + (dim + o) : 255 - (dim + o)}m`;
+			lines.push(`    ${_.range(1, 9).map((c) => `${bg(c)+fg(c)}${showPositions? Board.formatPosition([c, r]): "  "}    \u001b[0m`).join("")}`);
 			lines.push(` ${r}  ${_.range(1, 9).map((c) => `${bg(c)}\u001b[38;2;${(this.pieceAt([c, r]) || { }).color == Board.Black? "0;0;0" : "255;255;255"}m  ${(this.pieceAt([c, r]) || " ").toString()}   \u001b[0m`).join("")}`);
 			lines.push(`    ${_.range(1, 9).map((c) => `${bg(c)}      \u001b[0m`).join("")}`);
 			return lines;
@@ -133,11 +138,15 @@ class Board {
 
 	/**
 	 * Converts a variety of representations into a Symbol representing a color.
-	 * @param {(Symbol|number|string)} color - The color to convert to a symbol.
+	 * @param {(Symbol|number|string|Piece)} color - The color to convert to a symbol.
 	 * @return {Symbol} The symbol representing the color.
 	 * @throws Will throw an exception if the given color is invalid.
 	 */
 	static getColor(color) {
+		if (color instanceof Piece) {
+			return color.color;
+		};
+
 		if (_.includes(Board.Colors, color)) {
 			return color;
 		};
@@ -188,6 +197,7 @@ class Board {
 	/**
 	 * Checks whether a given position is inside the board and not in the extratabular void.
 	 * @param ({string[]|string}) position - A position parseable by parsePosition().
+	 * @throws Will throw an exception if the given position is unparseable.
 	 */
 	static validPosition(position) {
 		return _.every(Board.parsePosition(position), (n) => _.inRange(n, 1, 9));
@@ -197,10 +207,21 @@ class Board {
 	 * Turns a position into a string in the standard letter-number form.
 	 * @param {(string|number[]|Piece)} pos - A position parseable by Board.parsePosition.
 	 * @return {string} A nicely formatted string.
+	 * @throws Will throw an exception if the given position is unparseable.
 	 */
 	static formatPosition(position) {
 		position = Board.parsePosition(position);
 		return String.fromCharCode("A".charCodeAt(0) + position[0] - 1) + position[1];
+	};
+
+	/**
+	 * Turns a color into a string representing that color.
+	 * @param {(Symbol|number|string|Piece)} color - A value parseable by getColor().
+	 * @return {string} Either "black" or "white".
+	 * @throws Will throw an exception if the given color is invalid.
+	 */
+	static formatColor(color) {
+		return Board.getColor(color) == Board.Black? "black" : "white";
 	};
 };
 

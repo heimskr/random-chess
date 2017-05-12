@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 let _ = require("lodash"),
+	chalk = require("chalk"),
 	Board = require("./board.js"),
 	{ Piece, Knight, Pawn, Rook, Bishop, Queen, King } = require("./pieces/piece.js");
 
@@ -16,9 +17,6 @@ exports.Chess = class Chess {
 
 let b = new Board();
 b.setBoard();
-b.pieces.filter((p) => p instanceof Rook && p.color == Board.Black)[0].moveTo("B3");
-let pawn = b.pieceAt("C2");
-
-console.log(b.toString(8));
-pawn.moves();
-
+let piece = b.addPiece(King, "black", "D4");
+console.log(b.toString(8, true));
+console.log(`Moves for ${Board.formatColor(piece)} ${piece.constructor.name} at ${piece.formatPosition()}: ${piece.moves().map((p) => chalk.bold(Board.formatPosition(p))).join(", ")}`);

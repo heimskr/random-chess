@@ -13,17 +13,17 @@ class Pawn extends Piece {
 	moves() {
 		if (this.atTop) return [];
 		let out = [];
-		if (this.offset(0, 1) === null) {
-			out.push([...this.offsetPosition(0, 1), null]);
+		if (this.offset(0, 1, true) === null) {
+			out.push([...this.offsetPosition(0, 1, true), null]);
 		};
 
 		let other;
-		if ((other = this.offset(-1, 1)) && other.color != this.color) {
+		if ((other = this.offset(-1, 1, true)) && other.color != this.color) {
 			out.push([...other.position, other]);
 			console.log("Opposing piece seen leftways @", Board.formatPosition(other));
 		};
 
-		if ((other = this.offset(1, 1)) && other.color != this.color) {
+		if ((other = this.offset(1, 1, true)) && other.color != this.color) {
 			out.push([...other.position, other]);
 			console.log("Opposing piece seen rightways @", Board.formatPosition(other));
 		};
