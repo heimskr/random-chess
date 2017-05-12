@@ -4,7 +4,7 @@ class King extends Piece {
 	static get characters() { return ["♔", "♚"] };
 
 	moves() {
-		const out = [], add = (position, piece=null) => position !== null && out.push([...position, piece]);
+		const out = [], add = (position, piece=null) => position !== null && out.push([...position, piece, this]);
 		let other;
 
 		for (let x = -1; x <= 1; x++) {

@@ -17,7 +17,7 @@ class Piece {
 	 * @return {{0: number, 1: number, 2: ?Piece}[]} The array of valid moves.
 	 */
 	moves() {
-		throw new Error(`moves() not implemented for ${this.constructor.name}.`);
+		throw new Error(`moves() not implemented for ${this.name}.`);
 	};
 
 	/**
@@ -59,11 +59,11 @@ class Piece {
 		if ((other = this.board.pieceAt(pos)) && ((other.color != this.color && 0 < conviction) || conviction === 2)) {
 			this.board.removePiece(other);
 		} else if (other) {
-			console.log(`Not moving ${this.constructor.name} at ${Board.formatPosition(this.position)} to ${Board.formatPosition(pos)}.`);
+			console.log(`Not moving ${this.name} at ${Board.formatPosition(this.position)} to ${Board.formatPosition(pos)}.`);
 			return false;
 		};
 
-		console.log(`Moved ${this.constructor.name} at ${Board.formatPosition(this.position)} to ${Board.formatPosition(this.position = pos)}.`);
+		console.log(`Moved ${this.name} at ${Board.formatPosition(this.position)} to ${Board.formatPosition(this.position = pos)}.`);
 		return true;
 	};
 
@@ -72,7 +72,7 @@ class Piece {
 	 * @return {{0: number, 1: number, 2: ?Piece}[]} The array of valid moves.
 	 */
 	straightMoves() {
-		const out = [], add = (position, piece=null) => position !== null && out.push([...position, piece]);
+		const out = [], add = (position, piece=null) => position !== null && out.push([...position, piece, this]);
 		let other;
 
 		const line = (index, condition, direction) => {
@@ -108,13 +108,13 @@ class Piece {
 		const check = (x, y) => {
 			if (other = this.board.pieceAt([x, y])) {
 				if (other.color != this.color) {
-					out.push([x, y, other]);
+					out.push([x, y, other, this]);
 				};
 
 				return true;
 			};
 
-			out.push([x, y, null]);
+			out.push([x, y, null, this]);
 			return false;
 		};
 
@@ -149,6 +149,14 @@ class Piece {
 
 		return out;
 	};
+
+	/**
+	 * Removes this piece from its parent board.
+	 */
+	remove() {
+		this.board.pieces = this.board.pieces.filter((p) => p != this);
+		this.board = this._position = this.color = null;
+	};
 	
 	/**
 	 * Returns a Unicode character symbolizing this piece.
@@ -164,6 +172,11 @@ class Piece {
 	formatPosition() {
 		return Board.formatPosition(this.position);
 	};
+
+	get colorName() { return Board.formatColor(this.color) };
+	get ColorName() { return Board.formatColor(this.color).replace(/^(\w)/, ($0, $1) => $1.toUpperCase()) };
+	get Name() { return this.constructor.name };
+	get name() { return this.constructor.name.toLowerCase() };
 
 	get x() { return this.position[0] };
 	get y() { return this.position[1] };

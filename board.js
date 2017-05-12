@@ -72,22 +72,23 @@ class Board {
 
 	/**
 	 * Selects and returns a list of pieces on the board matching all of a given list of filters.
-	 * @param {...string} filters - An array of filters like [type, filter], where type is either "color" or "piece",
-	 *                              and filter is a color or a piece type.
+	 * @param {object} filters - An object whose keys are filter names and values are filters.
 	 * @return {Piece[]} An array of pieces matching the given filters.
 	 * @throws Will throw an exception if given an unrecognized filter.
 	 */
-	pickPieces(...filters) {
+	pickPieces({ color, piece }) {
 		let found = _.clone(this.pieces);
-		_.forEach(filters, ([type, filter]) => {
-			if (type == "color") {
-				found = _.filter(found, (piece) => piece.isColor(filter));
-			} else if (type == "piece") {
-				found = _.filter(found, (piece) => piece instanceof filter);
-			} else {
-				throw new Error(`Unknown piece filter type: "${type}"`);
-			};
-		});
+		if (color) {
+			color = Board.getColor(color);
+		};
+
+		if (typeof color != "undefined") {
+			found = _.filter(found, (p) => p.color == color);
+		};
+
+		if (typeof piece != "undefined") {
+			found = _.filter(found, (p) => p instanceof piece);
+		};
 
 		return found;
 	};
@@ -109,18 +110,9 @@ class Board {
 		if (position == null) {
 			return null;
 		};
-		
+
 		position = Board.parsePosition(position);
 		return this.pieces.filter((piece) => _.isEqual(piece.position, position))[0] || null;
-	};
-
-	/**
-	 * Removes a given piece.
-	 * @param {Piece} piece - The piece to remove.
-	 */
-	removePiece(piece) {
-		piece.board = piece.position = piece.color = null;
-		this.pieces = this.pieces.filter((p) => p != piece);
 	};
 
 	/**

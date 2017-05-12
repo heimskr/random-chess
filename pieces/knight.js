@@ -8,7 +8,7 @@ class Knight extends Piece {
 	};
 
 	moves() {
-		const out = [], add = (position, piece=null) => position !== null && out.push([...position, piece]);
+		const out = [], add = (position, piece=null) => position !== null && out.push([...position, piece, this]);
 		let other;
 		[[-1, 2], [1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1]].forEach(([x, y]) => {
 			if ((other = this.offset(x, y)) && other.color != this.color) {

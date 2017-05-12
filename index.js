@@ -5,9 +5,39 @@ let _ = require("lodash"),
 	{ Piece, Knight, Pawn, Rook, Bishop, Queen, King } = require("./pieces/piece.js");
 
 let _enableWarn = true;
-exports.Chess = class Chess {
+class Chess {
+	constructor() {
+		this.board = new Board();
+	};
+
+	/**
+	 * Returns an array containing all possible moves.
+	 * @return {Array.} An array of moves in the format [destination col, destination row, taken piece, source piece].
+	 */
+	allMoves() {
+		return this.board.pieces.reduce((a, piece) => a.concat(piece.moves()), []);
+	};
+
+	printMoves() {
+		let moves = this.allMoves();
+		for (let [x, y, take, src] of moves) {
+			console.log(`${src.ColorName} ${src.name} at ${src.formatPosition()} to ${Board.formatPosition([x, y])}${take? ` (will capture a ${take.ColorName} ${take.name})` : ""}.`);
+		};
+	};
+
+	makeMove([x, y, take, src]) {
+		if (take) {
+			take.remove();
+		};
+
+		src.position = [x, y];
+	};
+
+	get randomMove() { return _.sample(this.allMoves()) };
+
 	static get enableWarn() { return _enableWarn };
 	static set enableWarn(to) { _enableWarn = to };
+
 	static warn(...args) {
 		if (Chess.enableWarn) {
 			console.warn(...args);
@@ -15,10 +45,13 @@ exports.Chess = class Chess {
 	};
 };
 
-let b = new Board();
-// b.setBoard();
-let piece = b.addPiece(Knight, "black", "D4");
-b.addPiece(King, "black", "E6");
+exports.Chess = Chess;
+
+let c = new Chess();
+let b = c.board;
+b.setBoard();
+
+b.pickPieces({ color: "white", piece: Pawn }).forEach((piece) => piece.remove());
 
 console.log(b.toString(8, true));
-console.log(`Moves for ${Board.formatColor(piece)} ${piece.constructor.name} at ${piece.formatPosition()}: ${piece.moves().map((p) => chalk.bold(Board.formatPosition([p[0], p[1]]))).join(", ")}`);
+c.printMoves();
