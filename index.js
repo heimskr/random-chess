@@ -51,7 +51,15 @@ let c = new Chess();
 let b = c.board;
 b.setBoard();
 
-b.pickPieces({ color: "white", piece: Pawn }).forEach((piece) => piece.remove());
+// b.pickPieces({ color: "white", piece: Pawn }).forEach((piece) => piece.remove());
 
-console.log(b.toString(8, true));
-c.printMoves();
+setInterval(() => {
+	process.stdout.write(`\u001b[2J`);
+	console.log(b.toString(8, true));
+	c.makeMove(c.randomMove);
+	process.stdout.write(`\u001b[1;1H`);
+}, 1000);
+
+// console.log(b.toString(8, true));
+// c.printMoves();
+
