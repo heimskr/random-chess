@@ -13,7 +13,7 @@ class Board {
 	static get Colors() { return [Board.White, Board.Black] };
 
 	constructor(pieces=[]) {
-		this.pieces = pieces;
+		(this.pieces = pieces).forEach((piece) => piece.board = this);
 	};
 
 	/**
@@ -52,6 +52,7 @@ class Board {
 				throw new Error(`A piece already exists at ${Board.formatPosition(position)}.`);
 			};
 
+			pieceType.board = this;
 			this.pieces.push(pieceType);	
 			return pieceType;
 		};
@@ -117,8 +118,8 @@ class Board {
 
 	/**
 	 * Returns an ANSI rendering of the board.
-	 * @param {number} dim - The dimming factor for the square colors (0–23).
-	 * @param {boolean} showPositions - Whether to positions on each square.
+	 * @param {number} [dim=4] - The dimming factor for the square colors (0–23).
+	 * @param {boolean} [showPositions=false] - Whether to positions on each square.
 	 * @return {string} A graphical representation of the board containing ANSI escapes and non-ASCII characters.
 	 */
 	toString(dim=4, showPositions=false) {
@@ -130,6 +131,78 @@ class Board {
 			lines.push(`    ${_.range(1, 9).map((c) => `${bg(c)}      \u001b[0m`).join("")}`);
 			return lines;
 		}, ["", "      " + _.range(1, 9).map((c) => Board.formatPosition([c, 1])[0]).join("     "), ""]).join("\n");
+	};
+
+	/**
+	 * Performs an after-turn check. This will turn any pawn at the end of the board into a queen.
+	 */
+	maintain() {
+		this.pieces.forEach((piece) => piece instanceof Pawn && piece.atTop && piece.morph(Queen));
+	};
+
+	/**
+	 * Returns an array containing all possible moves.
+	 * @return {Move[]} An array of moves in the format [destination col, destination row, taken piece, source piece].
+	 */
+	allMoves() {
+		return this.pieces.reduce((a, piece) => a.concat(piece.moves()), []);
+	};
+
+	/**
+	 * Returns an array containing all possible moves for a given color.
+	 * @param {Color} color - The color whose possible moves will be returned.
+	 * @param {boolean} [excludeUnsafe=true] - Whether to exclude any moves that take the given color out of check (if it's in check).
+	 * @return {?Move[]} An array of moves for the given color. If null, this side is in checkmate.
+	 */
+	coloredMoves(color, excludeUnsafe=true) {
+		const all = this.allMoves();
+		let moves = all.filter((move) => move[3].color == color);
+		if (excludeUnsafe && _.some(moves, ([x, y, target, src]) => target instanceof King && target.color == color)) {
+			moves = moves.filter(([x, y, target, src]) => {
+				if (!(src instanceof King)) {
+					return false;
+				};
+			
+				let hypothetical = this.clone();
+				hypothetical.makeMove([x, y, target.clone(), src.clone()]);
+				return hypothetical.findCheck()[0] != color;
+			});
+
+			if (!moves.length) {
+				return null;
+			};
+		};
+
+		return moves;
+	};
+
+	/**
+	 * Executes a given move.
+	 * @param {Array} move - The move to make.
+	 */
+	makeMove([x, y, take, src]) {
+		if (take) {
+			take.remove();
+		};
+
+		src.position = [x, y];
+	};
+
+	/**
+	 * Finds whether either side is in check.
+	 * @return {Array} Returns an array containing the color of the side in check and the first move that targets the king.
+	 */
+	findCheck() {
+		let move = this.allMoves.filter(([x, y, target, src]) => target instanceof King)[0];
+		return move? [src.color, move] : [false, null];
+	};
+
+	/**
+	 * Returns a clone of this board.
+	 * @return {Board} A new Board with the same information.
+	 */
+	clone() {
+		return new Board(this.pieces.map((piece) => piece.clone()));
 	};
 
 	/**
@@ -216,11 +289,12 @@ class Board {
 	/**
 	 * Turns a color into a string representing that color.
 	 * @param {(Symbol|number|string|Piece)} color - A value parseable by getColor().
+	 * @param {boolean} [firstUpper=true] - Whether the first character should be uppercase.
 	 * @return {string} Either "black" or "white".
 	 * @throws Will throw an exception if the given color is invalid.
 	 */
-	static formatColor(color) {
-		return Board.getColor(color) == Board.Black? "black" : "white";
+	static formatColor(color, firstUpper=true) {
+		return Board.getColor(color) == Board.Black? (firstUpper? "Black" : "black") : (firstUpper? "White" : "white");
 	};
 };
 

@@ -24,7 +24,7 @@ class Piece {
 	 * Returns the piece at a given offset from this piece.
 	 * @param {number} h - The number of spaces to the right.
 	 * @param {number} v - The number of spaces up.
-	 * @param {boolean} relative - If true, the offsets will be relative to the piece's point of view
+	 * @param {boolean} [relative=false] - If true, the offsets will be relative to the piece's point of view
 	 * (up for white pieces, down for black pieces) — i.e., offsets will be negated for black pieces.
 	 * @return {?Piece} The piece at that position if there is one, or null if none exists.
 	 */
@@ -36,7 +36,7 @@ class Piece {
 	 * Returns this piece's position offset by a certain amount.
 	 * @param {number} h - The horizontal offset.
 	 * @param {number} v - The vertical offset.
-	 * @param {boolean} relative - If true, the offsets will be relative to the piece's point of view
+	 * @param {boolean} [relative=false] - If true, the offsets will be relative to the piece's point of view
 	 * (up for white pieces, down for black pieces) — i.e., offsets will be negated for black pieces.
 	 * @return {?number[]} The piece's position with the given offset added, or null if the position is outside the board.
 	 */
@@ -48,7 +48,7 @@ class Piece {
 	/**
 	 * Moves to a given position.
 	 * @param {(string|number[]|Piece)} pos - A position parseable by Board.parsePosition.
-	 * @param {number} conviction - How strongly you want to move the piece.
+	 * @param {number} [conviction=0] - How strongly you want to move the piece.
 	 * 0: do nothing if there is any piece already at the position.
 	 * 1: if there is a piece of the opposite color at the position, remove and replace it.
 	 * 2: if there is a piece of any color at the position, remove and replace it.
@@ -157,6 +157,23 @@ class Piece {
 		this.board.pieces = this.board.pieces.filter((p) => p != this);
 		this.board = this._position = this.color = null;
 	};
+
+	/**
+	 * Turns this piece into a different type.
+	 * This is done by removing the piece and adding a new one of the given type.
+	 * @param {(Piece|class)} newType - The type of piece for the replacement.
+	 * @return {Piece} The new piece.
+	 */
+	morph(newType) {
+		if (newType instanceof Piece) {
+			newType = newType.constructor;
+		};
+
+		const newPiece = new newType(this.board, this.color, this.position);
+		this.remove();
+		newPiece.board.addPiece(newPiece);
+		return newPiece;
+	};
 	
 	/**
 	 * Returns a Unicode character symbolizing this piece.
@@ -171,6 +188,16 @@ class Piece {
 	 */
 	formatPosition() {
 		return Board.formatPosition(this.position);
+	};
+
+	/**
+	 * Returns a clone of this piece.
+	 * @param {Board} [newBoard] - A parent board for the cloned piece.
+	 * @return {Piece} A new Piece with the same information.
+	 */
+	clone(newBoard) {
+		const board = newBoard || this.board;
+		return new this.constructor(board, this.color, [...this.position]);
 	};
 
 	get colorName() { return Board.formatColor(this.color) };
