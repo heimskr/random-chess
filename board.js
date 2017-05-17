@@ -28,7 +28,11 @@ class Board {
 			this.addPiece(piece, Board.Black, [9 - c, 9 - r]);
 		};
 
-		_.range(1, 9).forEach((c) => [this.addPiece(Pawn, Board.White, [c, 2]), this.addPiece(Pawn, Board.Black, [c, 7])]);
+		for (let c of _.range(1, 9)) {
+			this.addPiece(Pawn, Board.White, [c, 2]);
+			this.addPiece(Pawn, Board.Black, [c, 7]);
+		};
+
 		symmetric(Rook, 1, 1);
 		symmetric(Knight, 2, 1);
 		symmetric(Bishop, 3, 1);
@@ -36,6 +40,13 @@ class Board {
 		this.addPiece(King, Board.Black, [4, 8]);
 		this.addPiece(Queen, Board.White, [5, 1]);
 		this.addPiece(Queen, Board.Black, [5, 8]);
+	};
+
+	/**
+	 * Removes all pieces from the board.
+	 */
+	clear() {
+		this.pieces.forEach((piece) => piece.remove());
 	};
 
 	/**
@@ -77,7 +88,7 @@ class Board {
 	 * @return {Piece[]} An array of pieces matching the given filters.
 	 * @throws Will throw an exception if given an unrecognized filter.
 	 */
-	pickPieces({ color, piece }) {
+	filter({ color, piece, position }) {
 		let found = _.clone(this.pieces);
 		if (color) {
 			color = Board.getColor(color);
@@ -89,6 +100,14 @@ class Board {
 
 		if (typeof piece != "undefined") {
 			found = _.filter(found, (p) => p instanceof piece);
+		};
+
+		if (typeof position != "undefined") {
+			if (position instanceof Piece) {
+				position = position.position;
+			};
+
+			found = _.filter(found, (p) => Board.formatPosition(p) == Board.formatPosition(position));
 		};
 
 		return found;
@@ -113,7 +132,7 @@ class Board {
 		};
 
 		position = Board.parsePosition(position);
-		return this.pieces.filter((piece) => _.isEqual(piece.position, position))[0] || null;
+		return this.pieces.filter((piece) => piece.position[0] == position[0] && piece.position[1] == position[1])[0] || null;
 	};
 
 	/**
@@ -130,7 +149,7 @@ class Board {
 			lines.push(` ${r}  ${_.range(1, 9).map((c) => `${bg(c)}\u001b[38;2;${(this.pieceAt([c, r]) || { }).color == Board.Black? "0;0;0" : "255;255;255"}m  ${(this.pieceAt([c, r]) || " ").toString()}   \u001b[0m`).join("")}`);
 			lines.push(`    ${_.range(1, 9).map((c) => `${bg(c)}      \u001b[0m`).join("")}`);
 			return lines;
-		}, ["", "      " + _.range(1, 9).map((c) => Board.formatPosition([c, 1])[0]).join("     "), ""]).join("\n");
+		}, ["      " + _.range(1, 9).map((c) => Board.formatPosition([c, 1])[0]).join("     "), ""]).join("\n");
 	};
 
 	/**
@@ -156,15 +175,16 @@ class Board {
 	 */
 	coloredMoves(color, excludeUnsafe=true) {
 		const all = this.allMoves();
+		const inCheck = this.findCheck()[0] == color;
 		let moves = all.filter((move) => move[3].color == color);
-		if (excludeUnsafe && _.some(moves, ([x, y, target, src]) => target instanceof King && target.color == color)) {
-			moves = moves.filter(([x, y, target, src]) => {
-				if (!(src instanceof King)) {
-					return false;
+		if (excludeUnsafe) {
+			moves = moves.filter(([x, y, target, source]) => {
+				if (!(source instanceof King)) {
+					return !inCheck;
 				};
 			
 				let hypothetical = this.clone();
-				hypothetical.makeMove([x, y, target.clone(), src.clone()]);
+				hypothetical.makeMove([x, y, target? hypothetical.filter({ position: target })[0] : null, hypothetical.filter({ position: source })[0]]);
 				return hypothetical.findCheck()[0] != color;
 			});
 
@@ -177,6 +197,21 @@ class Board {
 	};
 
 	/**
+	 * Returns an array containing all safe moves. When one side is in check, any
+	 * moves that don't bring it out of check are unsafe. All other moves are safe.
+	 * @return {?Move[]} An array of safe moves, or null if either side is checkmated.
+	 */
+	safeMoves() {
+		const black = this.coloredMoves(Board.Black);
+		if (black == null) {
+			return null;
+		};
+
+		const white = this.coloredMoves(Board.White);
+		return white == null? null : black.concat(white);
+	};
+
+	/**
 	 * Executes a given move.
 	 * @param {Array} move - The move to make.
 	 */
@@ -185,7 +220,7 @@ class Board {
 			take.remove();
 		};
 
-		src.position = [x, y];
+		src.moveTo([x, y], 1);
 	};
 
 	/**
@@ -193,8 +228,8 @@ class Board {
 	 * @return {Array} Returns an array containing the color of the side in check and the first move that targets the king.
 	 */
 	findCheck() {
-		let move = this.allMoves.filter(([x, y, target, src]) => target instanceof King)[0];
-		return move? [src.color, move] : [false, null];
+		let move = this.allMoves().filter(([x, y, target, src]) => target instanceof King)[0];
+		return move? [move[2].color, move] : [false, null, false];
 	};
 
 	/**
@@ -202,7 +237,9 @@ class Board {
 	 * @return {Board} A new Board with the same information.
 	 */
 	clone() {
-		return new Board(this.pieces.map((piece) => piece.clone()));
+		const board = new Board();
+		this.pieces.forEach((piece) => board.addPiece(piece.clone(board)));
+		return board;
 	};
 
 	/**
@@ -245,7 +282,7 @@ class Board {
 	 */
 	static parsePosition(position) {
 		if (position instanceof Piece) {
-			return position.position;
+			return position.position.slice(0);
 		};
 
 		if (typeof position == "string") {
@@ -288,13 +325,28 @@ class Board {
 
 	/**
 	 * Turns a color into a string representing that color.
-	 * @param {(Symbol|number|string|Piece)} color - A value parseable by getColor().
+	 * @param {(Color|Symbol|number|string|Piece)} color - A value parseable by getColor().
 	 * @param {boolean} [firstUpper=true] - Whether the first character should be uppercase.
 	 * @return {string} Either "black" or "white".
 	 * @throws Will throw an exception if the given color is invalid.
 	 */
 	static formatColor(color, firstUpper=true) {
 		return Board.getColor(color) == Board.Black? (firstUpper? "Black" : "black") : (firstUpper? "White" : "white");
+	};
+
+	/**
+	 * Returns the opposite of a given color.
+	 * @param {(Color|Symbol|number|string|Piece)} color - A value parseable by getColor().
+	 * @return {?Color} The opposite color if the given color is valid, or null otherwise.
+	 */
+	static anticolor(color) {
+		color = Board.getColor(color);
+		
+		if (color == Board.Black) {
+			return Board.White;
+		};
+
+		return color == Board.White? Board.Black : null;
 	};
 };
 

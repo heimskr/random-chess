@@ -1,5 +1,4 @@
-let Piece = require("./piece.js"),
-	Board;
+let Piece = require("./piece.js");
 
 class Pawn extends Piece {
 	static get characters() { return ["♙", "♟"] };
@@ -31,4 +30,3 @@ class Pawn extends Piece {
 };
 
 module.exports = Pawn;
-module.exports.init = (board) => Board = board;

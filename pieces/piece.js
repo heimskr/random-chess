@@ -1,10 +1,11 @@
 let Board;
+let fs = require("fs"), write = (fn, data) => fs.writeFileSync(fn, typeof data != "object"? data : JSON.stringify(data));
 
 class Piece {
 	constructor(board, color, position) {
 		this.board = board;
 		this.color = color;
-		this.position = position;
+		this._position = Board.parsePosition(position);
 	};
 
 	get position() { return this._position };
@@ -47,23 +48,22 @@ class Piece {
 
 	/**
 	 * Moves to a given position.
-	 * @param {(string|number[]|Piece)} pos - A position parseable by Board.parsePosition.
+	 * @param {(string|number[]|Piece)} position - A position parseable by Board.parsePosition.
 	 * @param {number} [conviction=0] - How strongly you want to move the piece.
 	 * 0: do nothing if there is any piece already at the position.
 	 * 1: if there is a piece of the opposite color at the position, remove and replace it.
 	 * 2: if there is a piece of any color at the position, remove and replace it.
 	 * @return {boolean} true if the move succeeded; false otherwise.
 	 */
-	moveTo(pos, conviction=0) {
+	moveTo(position, conviction=0) {
 		let other;
-		if ((other = this.board.pieceAt(pos)) && ((other.color != this.color && 0 < conviction) || conviction === 2)) {
-			this.board.removePiece(other);
+		if ((other = this.board.pieceAt(position)) && ((other.color != this.color && 0 < conviction) || conviction === 2)) {
+			other.remove();
 		} else if (other) {
-			console.log(`Not moving ${this.name} at ${Board.formatPosition(this.position)} to ${Board.formatPosition(pos)}.`);
 			return false;
 		};
 
-		console.log(`Moved ${this.name} at ${Board.formatPosition(this.position)} to ${Board.formatPosition(this.position = pos)}.`);
+		this.position = position;
 		return true;
 	};
 
@@ -151,6 +151,15 @@ class Piece {
 	};
 
 	/**
+	 * Checks whether this piece is within the 8 squares surrounding another piece.
+	 * @param {Piece} piece - The piece to check for adjacency.
+	 * @return {boolean} Whether the pieces are adjacent.
+	 */
+	adjacentTo(piece) {
+		return !(piece.x - this.x == 0 && piece.y - this.y == 0) && Math.abs(piece.x - this.x) <= 1 && Math.abs(piece.y - this.y) <= 1;
+	};
+
+	/**
 	 * Removes this piece from its parent board.
 	 */
 	remove() {
@@ -196,8 +205,7 @@ class Piece {
 	 * @return {Piece} A new Piece with the same information.
 	 */
 	clone(newBoard) {
-		const board = newBoard || this.board;
-		return new this.constructor(board, this.color, [...this.position]);
+		return new this.constructor(newBoard, this.color, this._position);
 	};
 
 	get colorName() { return Board.formatColor(this.color) };
